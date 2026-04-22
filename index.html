@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İrem'e Özel Sudoku</title>
+    <style>
+        :root {
+            --bg-color: #fdf2f8;
+            --cell-size: 45px;
+            --border-color: #db2777;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: var(--bg-color);
+            color: #831843;
+        }
+        h1 { margin-top: 20px; }
+        #sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, var(--cell-size));
+            border: 3px solid var(--border-color);
+            margin-top: 20px;
+        }
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border: 1px solid #f9a8d4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: white;
+            cursor: pointer;
+        }
+        /* 3x3 Blok Kalınlaştırma */
+        .cell:nth-child(3n) { border-right: 3px solid var(--border-color); }
+        .cell:nth-child(9n) { border-right: 1px solid #f9a8d4; }
+        div:nth-child(n+19):nth-child(-n+27),
+        div:nth-child(n+46):nth-child(-n+54) { border-bottom: 3px solid var(--border-color); }
+
+        .fixed { background-color: #fce7f3; color: #be185d; cursor: default; }
+        .selected { background-color: #f472b6 !important; color: white; }
+        
+        .numpad {
+            margin-top: 20px;
+            display: flex;
+            gap: 5px;
+        }
+        .numpad button {
+            padding: 10px 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            background: #f472b6;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .numpad button:hover { background: #db2777; }
+    </style>
+</head>
+<body>
+
+    <h1>İrem Şentürk Sudoku</h1>
+    <p>Harfleri yerleştir, bulmacayı tamamla!</p>
+
+    <div id="sudoku-grid"></div>
+
+    <div class="numpad" id="numpad"></div>
+
+    <script>
+        // Harf Eşleşmeleri
+        const mapping = {
+            1: "İ", 2: "R", 3: "E", 4: "M", 5: "Ş", 6: "N", 7: "T", 8: "Ü", 9: "K"
+        };
+
+        // Örnek bir Sudoku Matrisi (0'lar boş hücrelerdir)
+        // Burayı ileride bir algoritma ile randomize edebilirsin
+        const rawBoard = [
+            [5, 3, 0, 0, 7, 0, 0, 0, 0],
+            [6, 0, 0, 1, 9, 5, 0, 0, 0],
+            [0, 9, 8, 0, 0, 0, 0, 6, 0],
+            [8, 0, 0, 0, 6, 0, 0, 0, 3],
+            [4, 0, 0, 8, 0, 3, 0, 0, 1],
+            [7, 0, 0, 0, 2, 0, 0, 0, 6],
+            [0, 6, 0, 0, 0, 0, 2, 8, 0],
+            [0, 0, 0, 4, 1, 9, 0, 0, 5],
+            [0, 0, 0, 0, 8, 0, 0, 7, 9]
+        ];
+
+        let selectedCell = null;
+        const gridElement = document.getElementById('sudoku-grid');
+        const numpadElement = document.getElementById('numpad');
+
+        // Grid oluşturma
+        function createGrid() {
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const cellValue = rawBoard[r][c];
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    if (cellValue !== 0) {
+                        cell.textContent = mapping[cellValue];
+                        cell.classList.add('fixed');
+                    }
+                    cell.onclick = () => {
+                        if (!cell.classList.contains('fixed')) {
+                            if (selectedCell) selectedCell.classList.remove('selected');
+                            selectedCell = cell;
+                            cell.classList.add('selected');
+                        }
+                    };
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        // Numpad (Harf tuşları) oluşturma
+        function createNumpad() {
+            Object.values(mapping).forEach(char => {
+                const btn = document.createElement('button');
+                btn.textContent = char;
+                btn.onclick = () => {
+                    if (selectedCell) {
+                        selectedCell.textContent = char;
+                    }
+                };
+                numpadElement.appendChild(btn);
+            });
+            // Temizleme butonu
+            const clearBtn = document.createElement('button');
+            clearBtn.textContent = "X";
+            clearBtn.style.background = "#9d174d";
+            clearBtn.onclick = () => { if (selectedCell) selectedCell.textContent = ""; };
+            numpadElement.appendChild(clearBtn);
+        }
+
+        createGrid();
+        createNumpad();
+    </script>
+</body>
+</html>
