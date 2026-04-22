@@ -9,6 +9,7 @@
             --bg-color: #fdf2f8;
             --cell-size: 45px;
             --border-color: #db2777;
+            --accent-color: #f472b6;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -17,18 +18,31 @@
             align-items: center;
             background-color: var(--bg-color);
             color: #831843;
+            margin: 0;
+            padding: 20px;
         }
-        h1 { margin-top: 20px; }
+        h1 { margin-bottom: 5px; color: #9d174d; text-align: center; }
+        #status-message {
+            height: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: #db2777;
+            margin: 5px 0;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
         #sudoku-grid {
             display: grid;
             grid-template-columns: repeat(9, var(--cell-size));
             border: 3px solid var(--border-color);
-            margin-top: 20px;
+            background-color: var(--border-color);
+            gap: 1px;
         }
         .cell {
             width: var(--cell-size);
             height: var(--cell-size);
-            border: 1px solid #f9a8d4;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -36,51 +50,55 @@
             font-weight: bold;
             background: white;
             cursor: pointer;
+            user-select: none;
         }
-        /* 3x3 Blok Kalınlaştırma */
-        .cell:nth-child(3n) { border-right: 3px solid var(--border-color); }
-        .cell:nth-child(9n) { border-right: 1px solid #f9a8d4; }
-        div:nth-child(n+19):nth-child(-n+27),
-        div:nth-child(n+46):nth-child(-n+54) { border-bottom: 3px solid var(--border-color); }
+        .cell:nth-child(3n) { border-right: 2px solid var(--border-color); }
+        .cell:nth-child(9n) { border-right: none; }
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 3px solid var(--border-color); }
 
         .fixed { background-color: #fce7f3; color: #be185d; cursor: default; }
         .selected { background-color: #f472b6 !important; color: white; }
         
         .numpad {
-            margin-top: 20px;
+            margin-top: 25px;
             display: flex;
-            gap: 5px;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            max-width: 400px;
         }
         .numpad button {
-            padding: 10px 15px;
+            padding: 12px 18px;
             font-size: 1.1rem;
             font-weight: bold;
             border: none;
-            background: #f472b6;
+            background: var(--accent-color);
             color: white;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
+            transition: transform 0.1s;
         }
+        .numpad button:active { transform: scale(0.95); }
         .numpad button:hover { background: #db2777; }
+        .clear-btn { background: #9d174d !important; }
+        .reset-btn { background: #6b7280 !important; } /* Gri tonlarında sıfırlama butonu */
     </style>
 </head>
 <body>
 
     <h1>İrem Şentürk Sudoku</h1>
-    <p>Harfleri yerleştir, bulmacayı tamamla!</p>
+    <p style="margin: 0;">Harfleri yerleştir, bulmacayı tamamla!</p>
+    
+    <div id="status-message"></div>
 
     <div id="sudoku-grid"></div>
 
     <div class="numpad" id="numpad"></div>
 
     <script>
-        // Harf Eşleşmeleri
-        const mapping = {
-            1: "İ", 2: "R", 3: "E", 4: "M", 5: "Ş", 6: "N", 7: "T", 8: "Ü", 9: "K"
-        };
-
-        // Örnek bir Sudoku Matrisi (0'lar boş hücrelerdir)
-        // Burayı ileride bir algoritma ile randomize edebilirsin
+        const mapping = { 1: "İ", 2: "R", 3: "E", 4: "M", 5: "Ş", 6: "N", 7: "T", 8: "Ü", 9: "K" };
+        
         const rawBoard = [
             [5, 3, 0, 0, 7, 0, 0, 0, 0],
             [6, 0, 0, 1, 9, 5, 0, 0, 0],
@@ -96,23 +114,29 @@
         let selectedCell = null;
         const gridElement = document.getElementById('sudoku-grid');
         const numpadElement = document.getElementById('numpad');
+        const statusMsg = document.getElementById('status-message');
 
-        // Grid oluşturma
         function createGrid() {
+            gridElement.innerHTML = ""; // Sıfırlama için temizle
             for (let r = 0; r < 9; r++) {
                 for (let c = 0; c < 9; c++) {
                     const cellValue = rawBoard[r][c];
                     const cell = document.createElement('div');
                     cell.classList.add('cell');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    
                     if (cellValue !== 0) {
                         cell.textContent = mapping[cellValue];
                         cell.classList.add('fixed');
                     }
+                    
                     cell.onclick = () => {
                         if (!cell.classList.contains('fixed')) {
                             if (selectedCell) selectedCell.classList.remove('selected');
                             selectedCell = cell;
                             cell.classList.add('selected');
+                            if (!isGameFinished()) statusMsg.textContent = "";
                         }
                     };
                     gridElement.appendChild(cell);
@@ -120,24 +144,71 @@
             }
         }
 
-        // Numpad (Harf tuşları) oluşturma
         function createNumpad() {
+            numpadElement.innerHTML = ""; // Temizle ve tekrar oluştur
             Object.values(mapping).forEach(char => {
                 const btn = document.createElement('button');
                 btn.textContent = char;
                 btn.onclick = () => {
                     if (selectedCell) {
                         selectedCell.textContent = char;
+                        checkProgress();
                     }
                 };
                 numpadElement.appendChild(btn);
             });
-            // Temizleme butonu
+
+            // Tek bir hücreyi silme butonu (X)
             const clearBtn = document.createElement('button');
             clearBtn.textContent = "X";
-            clearBtn.style.background = "#9d174d";
-            clearBtn.onclick = () => { if (selectedCell) selectedCell.textContent = ""; };
+            clearBtn.classList.add('clear-btn');
+            clearBtn.title = "Seçili hücreyi sil";
+            clearBtn.onclick = () => { 
+                if (selectedCell) {
+                    selectedCell.textContent = ""; 
+                    statusMsg.textContent = "";
+                }
+            };
             numpadElement.appendChild(clearBtn);
+
+            // Tüm tabloyu sıfırlama butonu (Reset)
+            const resetBtn = document.createElement('button');
+            resetBtn.innerHTML = "&#8634;"; // Yenileme ikonu
+            resetBtn.classList.add('reset-btn');
+            resetBtn.title = "Tüm tabloyu sıfırla";
+            resetBtn.onclick = () => {
+                if(confirm("Tüm ilerlemeni sıfırlamak istediğine emin misin İrem?")) {
+                    createGrid();
+                    statusMsg.textContent = "Baştan başladık!";
+                    selectedCell = null;
+                }
+            };
+            numpadElement.appendChild(resetBtn);
+        }
+
+        function checkProgress() {
+            const cells = document.querySelectorAll('.cell');
+            const board = Array.from({ length: 9 }, () => Array(9).fill(""));
+            cells.forEach(c => board[parseInt(c.dataset.row)][parseInt(c.dataset.col)] = c.textContent);
+
+            let rowOrColFull = false;
+            for (let r = 0; r < 9; r++) if (board[r].every(cell => cell !== "")) rowOrColFull = true;
+            for (let c = 0; c < 9; c++) {
+                let colItems = [];
+                for (let r = 0; r < 9; r++) colItems.push(board[r][c]);
+                if (colItems.every(cell => cell !== "")) rowOrColFull = true;
+            }
+
+            if (rowOrColFull) statusMsg.textContent = "Ee süper!";
+            if (isGameFinished()) {
+                statusMsg.innerHTML = "Tebrikler kazandın! <br> Ahmet seni çok seviyor ❤️";
+                statusMsg.style.fontSize = "1.3rem";
+            }
+        }
+
+        function isGameFinished() {
+            const cells = document.querySelectorAll('.cell');
+            return Array.from(cells).every(c => c.textContent !== "");
         }
 
         createGrid();
